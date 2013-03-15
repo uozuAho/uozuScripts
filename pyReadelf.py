@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
 SCRIPT_INFO = \
-""" Script that makes the output of readelf more useful. Use options to determine how the symbol
-table is ordered. It can either be in alphabetical order, or listed by type then size.
+""" Reorders readelf's symbol table output to be in descending order by size.
 
 readelf is a program in binutils that spits out information about a program from the .elf file. 
 This includes all functions, their location in memory, their size, data etc.
 
+BUG:  Doesn't support multiple symbol tables
 TODO: print to console by default
 TODO: add options (check readelf options first):
     a: output everything
