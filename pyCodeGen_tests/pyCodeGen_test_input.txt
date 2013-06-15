@@ -25,3 +25,11 @@ void ${Thingo.string1}something2() {
 
 void ${"Funky" + "Function"}something3() {
 }
+
+// More looped generation
+// #PYGEN_BEGIN
+// funcname = Thingo.string2 + "func_"
+// for i in range(5):
+// 	gen.writeln("void " + funcname + str(i) + "();")
+// #PYGEN_END
+// #PYGEN_OUTPUT

@@ -1,32 +1,43 @@
-"""
-Example (c code):
+script_description = """
+Inline code generator. Takes an input file and expands any code
+generation sections, which are written in python.
 
-// #PYGEN_BEGIN
-// import Thingo
-// print "yo"
-// #PYGEN_END
-// #PYGEN_OUTPUT
+Example input file text:
+-----------------------
+Anything any text blah blah
 
-void ${Thingo.string()}something() {
-}
+#PYGEN_BEGIN
+print "any python code can go here"
+gen.write("Generate output with 'gen.write()'\n")
+gen.writeln("Generate output with 'gen.writeln()'")
+#PYGEN_END
+#PYGEN_OUTPUT
 
+Anything...
+Text can be substituted using any python that generates
+a string, like ${"this"} or ${'t'+'h'+'i'+'s'}
+
+And so forth...
+-----------------------
 
 Rules:
- - Comment block characters preceding "#PYGEN_BEGIN" must be consistent for the whole block
-   and all blocks in the file
- - Input file must have a newline at the end of the file otherwise you might miss some output
- - Every block that generates code needs a #PYGEN_OUTPUT to tell the generator where to
-	 put the output code
+ - Characters preceding "#PYGEN_BEGIN" must be consistent
+   per line until "#PYGEN_END".
+ - Every block that generates code needs a #PYGEN_OUTPUT to
+   tell the generator where to put the output code
 
 TODO:
- - Make into proper console app
- - Allow user-configurable code generation block delimiters (configure in this
-   file, eg. genBlock_start = "PYGEN_BEGIN"
+ - Allow user-configurable code generation block delimiters
+   (configure in this file, eg. genBlock_start = "PYGEN_BEGIN")
  - Add option to keep generator script (default delete)
  - Support input file line-endings (may already "just work"?)
 
-POTENTIAL IMPROVEMENTS:
- - Remove need for as many rules as possible (or at least make them optional)
+
+Similar to:
+cog:  http://nedbatchelder.com/code/cog/
+pump: https://code.google.com/p/googletest/wiki/PumpManual
+
+Written by Warwick Stone (uozu.aho@gmail.com)
 """
 
 import argparse, logging, subprocess, shutil, os, re
@@ -40,19 +51,28 @@ class CONFIG:
 def main():
 	logging.basicConfig(level=CONFIG.log_level)
 	args = getArgParser().parse_args()
-	genscript_path = os.path.basename(args.input) + ".gen.py~"
-	output = getOutputFilename(args.input)
-	createGeneratorFile(args.input, genscript_path, output)
-	subprocess.call(["python", genscript_path])
+	input_file_dir, input_filename = os.path.split(args.input)
+	generator_file_path = input_filename + ".gen.py~"
+	if args.output == None:
+		output_file_path = getOutputFilename(args.input)
+	else:
+		output_file_path = args.output
+	createGeneratorFile(args.input, generator_file_path, output_file_path)
+	subprocess.call(["python", generator_file_path])
 	if not CONFIG.keep_generator_code:
-		removeCodeGenBlocksFromFile(output)
+		removeCodeGenBlocksFromFile(output_file_path)
 	cleanup()
 
 
 def getArgParser():
-	myParser_desc = """ To do: Description here... """
-	parser = argparse.ArgumentParser(description=myParser_desc)
-	parser.add_argument('input', help="input file")
+	parser = argparse.ArgumentParser(description=script_description,
+																	 formatter_class=argparse.RawDescriptionHelpFormatter)
+	parser.add_argument('input',          help="input file")
+	parser.add_argument('-o', '--output', help="Output file location. If omitted, "
+																						"the generated file will be placed "
+																					 "in the same directory as the input "
+																					 "file, with the same filename "
+																					 "suffixed with '_gen'.")
 	return parser
 
 

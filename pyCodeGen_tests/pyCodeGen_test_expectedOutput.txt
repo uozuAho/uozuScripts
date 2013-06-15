@@ -17,3 +17,10 @@ void ASDFsomething2() {
 
 void FunkyFunctionsomething3() {
 }
+
+// More looped generation
+void BLAHfunc_0();
+void BLAHfunc_1();
+void BLAHfunc_2();
+void BLAHfunc_3();
+void BLAHfunc_4();
