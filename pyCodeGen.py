@@ -51,17 +51,26 @@ class CONFIG:
 def main():
 	logging.basicConfig(level=CONFIG.log_level)
 	args = getArgParser().parse_args()
+	pyCodeGen_script_dir = os.path.dirname(os.path.realpath(__file__))
 	input_file_dir, input_filename = os.path.split(args.input)
-	generator_file_path = input_filename + ".gen.py~"
+	generator_file_path = os.path.join(pyCodeGen_script_dir, input_filename + ".gen.py~")
 	if args.output == None:
-		output_file_path = getOutputFilename(args.input)
+		output_file_path = os.path.join(input_file_dir, getOutputFilename(args.input))
 	else:
 		output_file_path = args.output
+
+	logging.debug("running in:          " + pyCodeGen_script_dir)
+	logging.debug("input_file_dir:      " + input_file_dir)
+	logging.debug("input_filename:      " + input_filename)
+	logging.debug("generator_file_path: " + generator_file_path)
+	logging.debug("output_file_path:    " + output_file_path)
+
 	createGeneratorFile(args.input, generator_file_path, output_file_path)
 	subprocess.call(["python", generator_file_path])
 	if not CONFIG.keep_generator_code:
 		removeCodeGenBlocksFromFile(output_file_path)
-	cleanup()
+	os.remove(generator_file_path)
+	os.remove(os.path.join(pyCodeGen_script_dir, "pyCodeGen.pyc"))
 
 
 def getArgParser():
@@ -74,13 +83,6 @@ def getArgParser():
 																					 "file, with the same filename "
 																					 "suffixed with '_gen'.")
 	return parser
-
-
-def cleanup():
-	""" Remove temporary files generated during script """
-	rm_list = [ f for f in os.listdir(".") if f.endswith("~") or f.endswith("pyc") ]
-	for f in rm_list:
-		os.remove(f)
 
 
 def getOutputFilename(input_path):
@@ -181,7 +183,7 @@ def createGeneratorFile(in_path, generator_file_path, out_path):
 	outfile.write("import logging\n")
 	outfile.write("\n")
 	outfile.write("logging.basicConfig(level="+str(CONFIG.log_level)+")\n")
-	outfile.write("gen = pyCodeGen.Generator('"+in_path+"', '"+out_path+"')\n")
+	outfile.write("gen = pyCodeGen.Generator(r'"+in_path+"', r'"+out_path+"')\n")
 
 	line_num = 0
 	for line in infile:
