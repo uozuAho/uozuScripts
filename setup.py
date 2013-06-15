@@ -3,10 +3,11 @@
 from distutils.core import setup
 
 setup(name='uozuScripts',
-      version='0.1',
+      version='0.2',
       description='A collection of scripts that I use enough to warrant installing',
       author='Warwick Stone',
       author_email='uozu.aho@gmail.com',
-      url='githubbbbb',
-      scripts=['pyReadelf.py'],
+      url='https://github.com/uozuAho/uozuScripts',
+      scripts=['pyCodeGen.py',
+               'pyReadelf.py'],
      )
