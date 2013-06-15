@@ -19,27 +19,33 @@ Rules:
 	 put the output code
 
 TODO:
- - Add option to keep generator code in output file
+ - Make into proper console app
  - Allow user-configurable code generation block delimiters (configure in this
    file, eg. genBlock_start = "PYGEN_BEGIN"
  - Add option to keep generator script (default delete)
  - Support input file line-endings (may already "just work"?)
- - Make into proper console app
 
 POTENTIAL IMPROVEMENTS:
  - Remove need for as many rules as possible (or at least make them optional)
 """
 
-import argparse, logging, subprocess, os, re
+import argparse, logging, subprocess, shutil, os, re
+
+class CONFIG:
+	log_level                 = logging.WARNING
+	keep_generator_code       = False # leave generator code in output file
+	keep_generator_file       = False # copy generator file to output dir
+
 
 def main():
-	logging.basicConfig(level="DEBUG")
+	logging.basicConfig(level=CONFIG.log_level)
 	args = getArgParser().parse_args()
 	genscript_path = os.path.basename(args.input) + ".gen.py~"
 	output = getOutputFilename(args.input)
 	createGeneratorFile(args.input, genscript_path, output)
 	subprocess.call(["python", genscript_path])
-	removeCodeGenBlocksFromFile(output)
+	if not CONFIG.keep_generator_code:
+		removeCodeGenBlocksFromFile(output)
 	cleanup()
 
 
@@ -154,7 +160,7 @@ def createGeneratorFile(in_path, generator_file_path, out_path):
 	outfile.write("import pyCodeGen\n")
 	outfile.write("import logging\n")
 	outfile.write("\n")
-	outfile.write("logging.basicConfig(level='DEBUG')\n")
+	outfile.write("logging.basicConfig(level="+str(CONFIG.log_level)+")\n")
 	outfile.write("gen = pyCodeGen.Generator('"+in_path+"', '"+out_path+"')\n")
 
 	line_num = 0
