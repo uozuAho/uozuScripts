@@ -1,6 +1,8 @@
 // pyCodeGen test file.
 
 #PYGEN_BEGIN
+import somedata
+
 class Thingo:
     string1 = "ASDF"
     string2 = "BLAH"
@@ -13,6 +15,8 @@ void ${Thingo.string1}something() {
 
 // Looped generation
 #PYGEN_BEGIN
+gen.writeln("// something from somedata: " + somedata.string_one)
+
 funcname = Thingo.string2 + "func_"
 for i in range(5):
 	gen.writeln("void " + funcname + str(i) + "();")

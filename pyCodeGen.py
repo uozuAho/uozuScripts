@@ -1,6 +1,8 @@
 script_description = """
-Inline code generator. Takes an input file and expands any code
-generation sections, which are written in python.
+===========================================================
+Inline code generator, similar to cog & pump. Takes an input
+file and runs any code generation sections, which are written
+in python.
 
 Example input file text:
 -----------------------
@@ -20,24 +22,44 @@ a string, like ${"this"} or ${'t'+'h'+'i'+'s'}
 And so forth...
 -----------------------
 
-Rules:
+
+Input file rules
+================
  - Characters preceding "#PYGEN_BEGIN" must be consistent
    per line until "#PYGEN_END".
  - Every block that generates code needs a #PYGEN_OUTPUT to
    tell the generator where to put the output code
 
-TODO:
+
+Simple explanation of operation
+===============================
+
+Step 1: pyCodeGen.py extracts python code from input file,
+        writes code to a generator file.
+
+Step 2: Generator file is called by pyCodeGen, creating the
+        output file.
+
+Step 3: Generator file and pyCodeGen.pyc are deleted
+
+
+TODO
+====
+ - Put arg parsing in single function. Use it to set CONFIG
+   members.
  - Allow user-configurable code generation block delimiters
    (configure in this file, eg. genBlock_start = "PYGEN_BEGIN")
- - Add option to keep generator script (default delete)
+ - Add option to keep generator script file (default delete)
  - Support input file line-endings (may already "just work"?)
 
 
-Similar to:
+References
+==========
 cog:  http://nedbatchelder.com/code/cog/
 pump: https://code.google.com/p/googletest/wiki/PumpManual
 
 Written by Warwick Stone (uozu.aho@gmail.com)
+===========================================================
 """
 
 import argparse, logging, subprocess, shutil, os, re
@@ -49,15 +71,20 @@ class CONFIG:
 
 
 def main():
-	logging.basicConfig(level=CONFIG.log_level)
 	args = getArgParser().parse_args()
-	pyCodeGen_script_dir = os.path.dirname(os.path.realpath(__file__))
 	input_file_dir, input_filename = os.path.split(args.input)
-	generator_file_path = os.path.join(pyCodeGen_script_dir, input_filename + ".gen.py~")
+	if args.verbose:
+		CONFIG.log_level = logging.DEBUG
+	logging.basicConfig(level=CONFIG.log_level)
 	if args.output == None:
 		output_file_path = os.path.join(input_file_dir, getOutputFilename(args.input))
 	else:
 		output_file_path = args.output
+	if args.keep_gencode:
+		CONFIG.keep_generator_code = True
+
+	pyCodeGen_script_dir = os.path.dirname(os.path.realpath(__file__))
+	generator_file_path = os.path.join(pyCodeGen_script_dir, input_filename + ".gen.py~")
 
 	logging.debug("running in:          " + pyCodeGen_script_dir)
 	logging.debug("input_file_dir:      " + input_file_dir)
@@ -76,27 +103,41 @@ def main():
 def getArgParser():
 	parser = argparse.ArgumentParser(description=script_description,
 																	 formatter_class=argparse.RawDescriptionHelpFormatter)
+
 	parser.add_argument('input',          help="input file")
-	parser.add_argument('-o', '--output', help="Output file location. If omitted, "
-																						"the generated file will be placed "
-																					 "in the same directory as the input "
-																					 "file, with the same filename "
-																					 "suffixed with '_gen'.")
+
+	parser.add_argument('-o', '--output',
+											help="Output file location. If omitted, the generated file will "
+											"be placed in the same directory as the input file, with the same "
+											"filename suffixed with '_gen'.")
+
+	parser.add_argument('-v', '--verbose', action='store_true', help="Verbose output")
+
+	parser.add_argument('-k', '--keep_gencode', action='store_true',
+											help="Generator code is left in the output file.")
 	return parser
 
 
 def getOutputFilename(input_path):
-	filename, ext = os.path.splitext(input_path)
-	return filename + "_gen" + ext
+	""" Return the input filename with '_gen' appended before
+			the extension. For example:
+
+			"/some/file.txt" --> "file_gen.txt"
+	"""
+	filename = os.path.basename(input_path)
+	name, ext = os.path.splitext(filename)
+	return name + "_gen" + ext
 
 
 class Generator:
+	""" Generator class used by the generator file. Stores all
+			strings generated within the generator file, then writes
+			them to file once the end of the generator file is reached.
+	"""
 	def __init__(self, in_path, out_path):
 		self.in_path = in_path
 		self.out_path = out_path
 		self._current_output_string = ""
-		self.inline_prefix = ""
-		self.inline_suffix = ""
 
 		self.output_block_count = 0
 		self.output_inline_count = 0
@@ -124,15 +165,6 @@ class Generator:
 
 	def appendInline(self, text):
 		self.generated_inlines.append(str(text))
-
-	def setInlinePrefixAndSuffix(self, prefix, suffix):
-		""" Specify the prefix and suffix characters you will use for inline generator
-		expressions. For example if you are generating C code, you may want to call
-		pyCodeGen.setInlinePrefixAndSuffix("/*", "*/").
-		The prefix and suffix will be removed in the generation of inline text.
-		"""
-		self.inline_prefix = prefix
-		self.inline_suffix = suffix
 
 	def substituteInlineExprs(self, line):
 		return re.sub("\$\{(.+?)\}", self._getNextInline, line)
@@ -180,10 +212,13 @@ def createGeneratorFile(in_path, generator_file_path, out_path):
 	current_pygen_prefix = None
 
 	outfile.write("import pyCodeGen\n")
-	outfile.write("import logging\n")
+	outfile.write("import os, sys, logging\n")
 	outfile.write("\n")
 	outfile.write("logging.basicConfig(level="+str(CONFIG.log_level)+")\n")
 	outfile.write("gen = pyCodeGen.Generator(r'"+in_path+"', r'"+out_path+"')\n")
+
+	outfile.write("logging.debug('genscript running in: ' + os.getcwd())\n")
+	outfile.write("sys.path.append(r'"+os.path.dirname(in_path)+"')\n")
 
 	line_num = 0
 	for line in infile:

@@ -5,6 +5,7 @@ void ASDFsomething() {
 }
 
 // Looped generation
+// something from somedata: bobobobobo
 void BLAHfunc_0();
 void BLAHfunc_1();
 void BLAHfunc_2();
